@@ -1,6 +1,12 @@
 import tkinter as tk
 from tkinter import messagebox
 from yt_dlp import YoutubeDL
+import threading
+
+def start_download():
+    # run download in background thread
+    threading.Thread(target=download, daemon=True).start()
+
 
 def download():
     url = url_entry.get().strip()
@@ -10,6 +16,8 @@ def download():
         messagebox.showerror("Error", "Please enter a YouTube URL")
         return
 
+    download_btn.config(state="disabled")
+
     if format_choice == "MP3":
         ydl_opts = {
             'format': 'bestaudio/best',
@@ -17,11 +25,11 @@ def download():
             'postprocessors': [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
-                'preferredquality': '320',
+                'preferredquality': '192',
             }],
             'quiet': True,
         }
-    else:
+    else:  # MP4 (Windows-safe)
         ydl_opts = {
             'format': 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]',
             'outtmpl': '%(title)s.%(ext)s',
@@ -35,8 +43,10 @@ def download():
         messagebox.showinfo("Success", f"{format_choice} download complete!")
     except Exception as e:
         messagebox.showerror("Error", f"Download failed:\n{e}")
+    finally:
+        download_btn.config(state="normal")
 
-
+# --- UI ---
 root = tk.Tk()
 root.title("YouTube Downloader")
 
@@ -48,8 +58,7 @@ format_var = tk.StringVar(value="MP3")
 tk.Label(root, text="Format:").pack(pady=5)
 tk.OptionMenu(root, format_var, "MP3", "MP4").pack()
 
-tk.Button(root, text="Download", command=download).pack(pady=12)
+download_btn = tk.Button(root, text="Download", command=start_download)
+download_btn.pack(pady=12)
 
 root.mainloop()
-
-
