@@ -1,84 +1,119 @@
-import tkinter as tk
-from tkinter import messagebox, filedialog
-from yt_dlp import YoutubeDL
-import threading
+import sys
 import os
+from PySide6.QtWidgets import (
+    QApplication, QWidget, QLabel, QLineEdit, QPushButton,
+    QComboBox, QFileDialog, QMessageBox, QHBoxLayout, QVBoxLayout
+)
+from PySide6.QtCore import QThread, Signal
+from yt_dlp import YoutubeDL
+
+class DownloadWorker(QThread):
+    finished = Signal(bool, str)
+
+    def __init__(self, url, fmt, folder):
+        super().__init__()
+        self.url = url
+        self.fmt = fmt
+        self.folder = folder
+
+    def run(self):
+        outtmpl = os.path.join(self.folder, "%(title)s.%(ext)s")
+
+        if self.fmt == "MP3":
+            ydl_opts = {
+                'format': 'bestaudio/best',
+                'outtmpl': outtmpl,
+                'postprocessors': [{
+                    'key': 'FFmpegExtractAudio',
+                    'preferredcodec': 'mp3',
+                    'preferredquality': '192',
+                }],
+                'quiet': True,
+            }
+        else: 
+            ydl_opts = {
+                'format': 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]',
+                'outtmpl': outtmpl,
+                'merge_output_format': 'mp4',
+                'quiet': True,
+            }
+
+        try:
+            with YoutubeDL(ydl_opts) as ydl:
+                ydl.download([self.url])
+            self.finished.emit(True, "Download complete!")
+        except Exception as e:
+            self.finished.emit(False, str(e))
 
 
-def choose_folder():
-    folder = filedialog.askdirectory()
-    if folder:
-        output_dir.set(folder)
-
-def start_download():
-    threading.Thread(target=download, daemon=True).start()
+class MainWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("YouTube Downloader")
 
 
-def download():
-    url = url_entry.get().strip()
-    format_choice = format_var.get()
-    folder = output_dir.get()
+        self.url_edit = QLineEdit()
+        self.url_edit.setPlaceholderText("YouTube URL")
 
-    if not url:
-        messagebox.showerror("Error", "Please enter a YouTube URL")
-        return
-    
-    if not folder:
-        messagebox.showerror("Error", "Please choose an output folder")
-        return
+        self.folder_edit = QLineEdit()
+        self.browse_btn = QPushButton("Browse…")
+        self.browse_btn.clicked.connect(self.choose_folder)
 
-    download_btn.config(state="disabled")
-    outtmpl = os.path.join(folder, "%(title)s.%(ext)s")
+        self.format_box = QComboBox()
+        self.format_box.addItems(["MP3", "MP4"])
 
-    if format_choice == "MP3":
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'outtmpl': outtmpl,
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'mp3',
-                'preferredquality': '320',
-            }],
-            'quiet': True,
-        }
-    else: 
-        ydl_opts = {
-            'format': 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]',
-            'outtmpl': outtmpl,
-            'merge_output_format': 'mp4',
-            'quiet': True,
-        }
+        folder_layout = QHBoxLayout()
+        folder_layout.addWidget(self.folder_edit)
+        folder_layout.addWidget(self.browse_btn)
 
-    try:
-        with YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-        messagebox.showinfo("Success", f"{format_choice} download complete!")
-    except Exception as e:
-        messagebox.showerror("Error", f"Download failed:\n{e}")
-    finally:
-        download_btn.config(state="normal")
+        # Download button
+        self.download_btn = QPushButton("Download")
+        self.download_btn.clicked.connect(self.start_download)
 
-root = tk.Tk()
-root.title("YouTube Downloader")
+        # Layout
+        layout = QVBoxLayout()
+        layout.addWidget(QLabel("YouTube URL:"))
+        layout.addWidget(self.url_edit)
+        layout.addWidget(QLabel("Output folder:"))
+        layout.addLayout(folder_layout)
+        layout.addWidget(QLabel("Format:"))
+        layout.addWidget(self.format_box)
+        layout.addWidget(self.download_btn)
 
-tk.Label(root, text="YouTube URL:").pack(pady=5)
-url_entry = tk.Entry(root, width=55)
-url_entry.pack(padx=10, pady=5)
+        self.setLayout(layout)
 
-format_var = tk.StringVar(value="MP3")
-tk.Label(root, text="Format:").pack(pady=5)
-tk.OptionMenu(root, format_var, "MP3", "MP4").pack()
+    def choose_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Select Output Folder")
+        if folder:
+            self.folder_edit.setText(folder)
 
-output_dir = tk.StringVar()
-tk.Label(root, text="Output Folder:").pack(pady=4)
+    def start_download(self):
+        url = self.url_edit.text().strip()
+        folder = self.folder_edit.text().strip()
+        fmt = self.format_box.currentText()
 
-folder_frame = tk.Frame(root)
-folder_frame.pack(padx=10)
+        if not url or not folder:
+            QMessageBox.warning(self, "Error", "Please enter URL and output folder")
+            return
 
-tk.Entry(folder_frame, textvariable=output_dir, width=45).pack(side="left", padx=5)
-tk.Button(folder_frame, text="Browse...", command=choose_folder).pack(side="left")
+        self.download_btn.setEnabled(False)
 
-download_btn = tk.Button(root, text="Download", command=start_download)
-download_btn.pack(pady=12)
+        self.worker = DownloadWorker(url, fmt, folder)
+        self.worker.finished.connect(self.on_finished)
+        self.worker.start()
 
-root.mainloop()
+    def on_finished(self, success, message):
+        self.download_btn.setEnabled(True)
+
+        if success:
+            QMessageBox.information(self, "Success", message)
+        else:
+            QMessageBox.critical(self, "Error", message)
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    window = MainWindow()
+    window.resize(450, 220)
+    window.show()
+    sys.exit(app.exec_())
