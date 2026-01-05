@@ -26,7 +26,7 @@ class DownloadWorker(QThread):
                 'postprocessors': [{
                     'key': 'FFmpegExtractAudio',
                     'preferredcodec': 'mp3',
-                    'preferredquality': '192',
+                    'preferredquality': '320',
                 }],
                 'quiet': True,
             }
@@ -49,7 +49,7 @@ class DownloadWorker(QThread):
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("YouTube Downloader")
+        self.setWindowTitle("YT2MPEG")
 
 
         self.url_edit = QLineEdit()
