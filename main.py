@@ -3,9 +3,9 @@ import os
 import json
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
-    QComboBox, QFileDialog, QMessageBox, QHBoxLayout, QVBoxLayout
+    QComboBox, QFileDialog, QMessageBox, QHBoxLayout, QVBoxLayout, QProgressBar
 )
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QThread, Signal, Qt
 from yt_dlp import YoutubeDL
 
 
@@ -33,12 +33,24 @@ def save_prefs(prefs):
 
 class DownloadWorker(QThread):
     finished = Signal(bool, str)
+    progress = Signal(int)
 
     def __init__(self, url, fmt, folder):
         super().__init__()
         self.url = url
         self.fmt = fmt
         self.folder = folder
+
+    def progress_hook(self, d):
+        if d['status'] == 'downloading':
+            total = d.get('total_bytes') or d.get('total_bytes_estimate')
+            downloaded = d.get('downloaded_bytes', 0)
+            if total:
+                percent = int(downloaded / total * 100)
+                self.progress.emit(percent)
+
+        elif d['status'] == 'finished':
+            self.progress.emit(100)
 
     def run(self):
         outtmpl = os.path.join(self.folder, "%(title)s.%(ext)s")
@@ -52,13 +64,15 @@ class DownloadWorker(QThread):
                     'preferredcodec': 'mp3',
                     'preferredquality': '320',
                 }],
+                'progress_hooks': [self.progress_hook],
                 'quiet': True,
             }
-        else: 
+        else:
             ydl_opts = {
                 'format': 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]',
                 'outtmpl': outtmpl,
                 'merge_output_format': 'mp4',
+                'progress_hooks': [self.progress_hook],
                 'quiet': True,
             }
 
@@ -90,9 +104,13 @@ class MainWindow(QWidget):
         folder_layout.addWidget(self.folder_edit)
         folder_layout.addWidget(self.browse_btn)
 
-        # Download button
         self.download_btn = QPushButton("Download")
         self.download_btn.clicked.connect(self.start_download)
+
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setVisible(False)
 
         # Layout
         layout = QVBoxLayout()
@@ -103,6 +121,7 @@ class MainWindow(QWidget):
         layout.addWidget(QLabel("Format:"))
         layout.addWidget(self.format_box)
         layout.addWidget(self.download_btn)
+        layout.addWidget(self.progress_bar)
 
         self.setLayout(layout)
 
@@ -126,14 +145,18 @@ class MainWindow(QWidget):
             QMessageBox.warning(self, "Error", "Please enter URL and output folder")
             return
 
-        self.download_btn.setEnabled(False)
+        self.download_btn.setVisible(False)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setValue(0)
 
         self.worker = DownloadWorker(url, fmt, folder)
+        self.worker.progress.connect(self.progress_bar.setValue)
         self.worker.finished.connect(self.on_finished)
         self.worker.start()
 
     def on_finished(self, success, message):
-        self.download_btn.setEnabled(True)
+        self.download_btn.setVisible(True)
+        self.progress_bar.setVisible(False)
 
         if success:
             QMessageBox.information(self, "Success", message)
