@@ -1,6 +1,11 @@
 # YT2MPEG
 The simplest app to download MP3 or MP4 files utilizing Yt_dlp
 
+# Features
+* Flac / MP3 / MP4 Download Support
+* Youtube Playlist Download Support
+* Whole website support here : https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md
+
 # Running / building
 To just run the program without building it into an exe file you can run the "RUN WITHOUT BUILDING EXE" <br>
 To build the program into one .exe file run the "BUILD EXE" file
