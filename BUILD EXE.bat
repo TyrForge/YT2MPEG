@@ -1,7 +1,7 @@
 @echo off
 
 pip install -r requirements.txt
-python -m PyInstaller --onefile -n YT2MPEG --noconsole main.py 
+pyinstaller --noconfirm --onefile --windowed --icon "./FILE.ico" --name "YT2MPEG"  "./main.py"
 rmdir /S /Q "./build/"
 
 cls

@@ -3,9 +3,10 @@ import os
 import json
 from PySide6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
-    QComboBox, QFileDialog, QMessageBox, QHBoxLayout, QVBoxLayout, QProgressBar
+    QComboBox, QFileDialog, QMessageBox, QHBoxLayout, QVBoxLayout, QProgressBar, QMainWindow
 )
 from PySide6.QtCore import QThread, Signal, Qt
+from PySide6.QtGui import QIcon
 from yt_dlp import YoutubeDL
 
 
@@ -13,7 +14,7 @@ APP_NAME = "YT2MPEG"
 prefs_path = os.path.join(os.getenv('APPDATA') or os.path.expanduser("~"), APP_NAME)
 prefs_file = os.path.join(prefs_path, "prefs.json")
 
-# --- Load prefs ---
+
 def load_prefs():
     if os.path.exists(prefs_file):
         try:
@@ -23,7 +24,6 @@ def load_prefs():
             pass
     return {}
 
-# --- Save prefs ---
 def save_prefs(prefs):
     os.makedirs(prefs_path, exist_ok=True)
     with open(prefs_file, "w") as f:
@@ -89,7 +89,6 @@ class MainWindow(QWidget):
         super().__init__()
         self.setWindowTitle("YT2MPEG")
 
-
         self.url_edit = QLineEdit()
         self.url_edit.setPlaceholderText("YouTube URL")
 
@@ -112,7 +111,6 @@ class MainWindow(QWidget):
         self.progress_bar.setValue(0)
         self.progress_bar.setVisible(False)
 
-        # Layout
         layout = QVBoxLayout()
         layout.addWidget(QLabel("YouTube URL:"))
         layout.addWidget(self.url_edit)
@@ -132,7 +130,6 @@ class MainWindow(QWidget):
         folder = QFileDialog.getExistingDirectory(self, "Select Output Folder")
         if folder:
             self.folder_edit.setText(folder)
-            # Save immediately
             self.prefs["last_output_folder"] = folder
             save_prefs(self.prefs)
 
