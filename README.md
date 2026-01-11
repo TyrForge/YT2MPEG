@@ -1,7 +1,7 @@
 ![alt text](https://raw.githubusercontent.com/TyrForge/YT2MPEG/refs/heads/main/misc/YT2MPEG%20withsmall.svg "YT2MPEG logo")
 
 # Features
-* Flac / MP3 / MP4 Download Support
+* FLAC / MP3 / MP4 Download Support
 * Youtube Playlist Download Support
 * Whole website support here : https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md
 
