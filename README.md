@@ -1,4 +1,5 @@
-# YT2MPEG
+![YT2MPEG installer](https://raw.githubusercontent.com/TyrForge/YT2MPEG/refs/heads/main/misc/YT2MPEG%20withsmall.svg)
+
 The simplest app to download MP3 or MP4 files utilizing Yt_dlp
 
 # Running / building
