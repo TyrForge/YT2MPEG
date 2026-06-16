@@ -17,7 +17,7 @@ sleep 1
 x11vnc -display $DISPLAY_NUM -forever -nopw -shared -localhost -quiet &
 
 # Start noVNC websocket proxy
-websockify --web /opt/novnc $NOVNC_PORT localhost:$VNC_PORT &
+websockify --web /usr/share/novnc $NOVNC_PORT localhost:$VNC_PORT &
 
 echo "noVNC available at http://localhost:${NOVNC_PORT}/vnc.html"
 
