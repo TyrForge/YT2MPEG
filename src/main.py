@@ -10,7 +10,7 @@ IS_WINDOWS = platform.system() == "Windows"
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QLineEdit, QPushButton, QComboBox, QCheckBox, QFileDialog,
+    QLabel, QLineEdit, QPushButton, QComboBox, QCheckBox,
     QScrollArea, QFrame, QProgressBar, QMessageBox, QSizePolicy
 )
 from PySide6.QtCore import Qt, QThread, Signal, QObject, QTimer
@@ -27,14 +27,7 @@ except ImportError:
 
 # ─── Constants ────────────────────────────────────────────────────────────────
 
-def _default_music_dir():
-    if IS_WINDOWS:
-        # Use Windows Music library if available, fallback to ~/Music
-        music = os.environ.get("USERPROFILE", str(Path.home()))
-        return str(Path(music) / "Music")
-    return str(Path.home() / "Music")
-
-DEFAULT_MUSIC_DIR = _default_music_dir()
+DEFAULT_MUSIC_DIR = os.environ.get("DOWNLOAD_DIR", str(Path.home() / "Music"))
 
 AUDIO_FORMATS = [
     ("MP3  -  most compatible",    "mp3"),
@@ -380,16 +373,10 @@ class MainWindow(QMainWindow):
         v.addWidget(self._field_lbl("Media folder"))
         v.addSpacing(5)
 
-        row = QHBoxLayout(); row.setSpacing(6)
-        self.folder_input = QLineEdit(DEFAULT_MUSIC_DIR)
-        self.folder_input.setPlaceholderText("~/Music")
-        self.folder_input.textChanged.connect(self._update_cmd)
-        row.addWidget(self.folder_input)
-        br = QPushButton("…"); br.setFixedWidth(36)
-        br.setCursor(Qt.PointingHandCursor)
-        br.clicked.connect(self._browse)
-        row.addWidget(br)
-        v.addLayout(row)
+        folder_lbl = QLabel(DEFAULT_MUSIC_DIR)
+        folder_lbl.setObjectName("code")
+        folder_lbl.setWordWrap(True)
+        v.addWidget(folder_lbl)
 
         v.addSpacing(20); v.addWidget(self._sep()); v.addSpacing(20)
 
@@ -553,11 +540,6 @@ class MainWindow(QMainWindow):
         f = QFrame(); f.setObjectName("sep"); f.setFrameShape(QFrame.HLine); return f
 
     # ── Actions ───────────────────────────────────────────────────────────────
-    def _browse(self):
-        current = os.path.expanduser(self.folder_input.text() or DEFAULT_MUSIC_DIR)
-        d = QFileDialog.getExistingDirectory(self, "Select Media Folder", current)
-        if d: self.folder_input.setText(d)
-
     def _add_url(self):
         raw = self.url_input.text().strip()
         if not raw: return
@@ -591,10 +573,6 @@ class MainWindow(QMainWindow):
 
     def _update_cmd(self):
         parts = ["python main.py"]
-        folder = self.folder_input.text().strip()
-        if folder and folder != DEFAULT_MUSIC_DIR:
-            # Quote paths properly — on Windows backslashes need quoting too
-            parts.append(f'--dir "{folder}"')
         fmt = self.fmt_combo.currentData()
         if fmt != "mp3": parts.append(f"--format {fmt}")
         org = self.org_combo.currentData()
@@ -638,7 +616,7 @@ class MainWindow(QMainWindow):
 
     # ── yt-dlp opts ───────────────────────────────────────────────────────────
     def _get_opts(self):
-        base  = os.path.expanduser(self.folder_input.text() or DEFAULT_MUSIC_DIR)
+        base  = os.path.expanduser(DEFAULT_MUSIC_DIR)
         fmt   = self.fmt_combo.currentData()
         org   = self.org_combo.currentData()
         thumb = self.chk_thumb.isChecked()

@@ -1,0 +1,12 @@
+services:
+  yt2mpeg:
+    build: .
+    ports:
+      - "6080:6080"
+    volumes:
+      - ./downloads:/downloads
+    environment:
+      - DOWNLOAD_DIR=/downloads
+      # Optional: change screen resolution
+      # - RESOLUTION=1920x1080x24
+    restart: unless-stopped
